@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -12,6 +12,7 @@ import { Eye, EyeOff, Loader2 } from "lucide-react"
 
 export default function Register() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -21,6 +22,8 @@ export default function Register() {
     password: "",
     confirmPassword: "",
   })
+
+  const redirectTo = searchParams.get('redirect')
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -42,16 +45,20 @@ export default function Register() {
     setLoading(true)
     
     try {
-      // Mock registration - replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Store user data with the actual name from the form
+      const userData = {
+        name: formData.fullName,
+        email: formData.email,
+      }
       localStorage.setItem("token", "mock-token")
+      localStorage.setItem("userData", JSON.stringify(userData))
       
       toast({
         title: "Registration Successful",
-        description: "Welcome to CryptoEdu!",
+        description: "Please login to continue",
       })
       
-      router.push("/dashboard")
+      router.push(`/login${redirectTo ? `?redirect=${redirectTo}` : ''}`)
       router.refresh()
     } catch (error) {
       toast({

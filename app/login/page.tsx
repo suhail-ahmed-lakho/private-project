@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -12,6 +12,7 @@ import { Eye, EyeOff, Loader2 } from "lucide-react"
 
 export default function Login() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -19,6 +20,8 @@ export default function Login() {
     email: "",
     password: "",
   })
+
+  const redirectTo = searchParams.get('redirect')
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -30,16 +33,38 @@ export default function Login() {
     setLoading(true)
     
     try {
-      // Mock login - replace with actual API call
       await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // Get existing user data if available
+      const existingUserData = localStorage.getItem("userData")
+      const userData = existingUserData 
+        ? JSON.parse(existingUserData)
+        : {
+            name: "Demo User",
+            email: formData.email,
+          }
+      
       localStorage.setItem("token", "mock-token")
+      localStorage.setItem("userData", JSON.stringify(userData))
       
       toast({
         title: "Login Successful",
         description: "Welcome back to CryptoEdu!",
       })
       
-      router.push("/dashboard")
+      // Check for redirect path
+      if (redirectTo) {
+        router.push(redirectTo)
+      } else {
+        // Check if there's a selected plan
+        const selectedPlan = localStorage.getItem("selectedPlan")
+        if (selectedPlan) {
+          router.push("/payment")
+        } else {
+          router.push("/dashboard")
+        }
+      }
+      
       router.refresh()
     } catch (error) {
       toast({
