@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import {
   LayoutDashboard,
@@ -13,6 +13,8 @@ import {
   LogOut
 } from "lucide-react"
 import { AdminSidebar } from "@/components/admin/admin-sidebar"
+import { useEffect } from "react"
+import { Toaster } from "@/components/ui/toaster"
 
 const sidebarItems = [
   {
@@ -53,6 +55,15 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const router = useRouter()
+
+  useEffect(() => {
+    // Add authentication check
+    const isAdmin = localStorage.getItem("isAdmin")
+    if (!isAdmin) {
+      router.push("/login")
+    }
+  }, [router])
 
   return (
     <div className="flex h-screen">
@@ -60,6 +71,7 @@ export default function AdminLayout({
       <main className="flex-1 overflow-y-auto p-8">
         {children}
       </main>
+      <Toaster />
     </div>
   )
 }

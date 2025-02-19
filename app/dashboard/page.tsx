@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, memo } from "react"
 import { SiteHeader } from "@/components/site-header"
-import { Card } from "@/components/ui/card"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -154,6 +154,26 @@ interface Plan {
   purchaseDate: string;
 }
 
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ElementType;
+}
+
+const StatCard = memo(({ title, value, icon: Icon }: StatCardProps) => {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+      </CardContent>
+    </Card>
+  )
+})
+
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("overview")
   const [userName, setUserName] = useState<string>("")
@@ -181,6 +201,7 @@ export default function DashboardPage() {
     bep20Address: ''
   })
   const [isWithdrawing, setIsWithdrawing] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     setMounted(true)
@@ -279,6 +300,18 @@ export default function DashboardPage() {
         }
       }
     }
+
+    // Add loading state
+    const fetchData = async () => {
+      try {
+        // Fetch data
+        setIsLoading(false)
+      } catch (error) {
+        console.error("Error fetching data:", error)
+        setIsLoading(false)
+      }
+    }
+    fetchData()
   }, [router])
 
   const handleWithdrawSubmit = async () => {
@@ -360,6 +393,10 @@ export default function DashboardPage() {
     console.log("Stored payment:", payment ? JSON.parse(payment) : null)
   }, [])
 
+  if (isLoading) {
+    return <div className="flex h-screen items-center justify-center">Loading...</div>
+  }
+
   if (!mounted) return null
 
   return (
@@ -434,53 +471,10 @@ export default function DashboardPage() {
 
         <TabsContent value="overview">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="hover-card p-6">
-              <div className="flex items-center gap-4">
-                <div className="rounded-xl bg-primary/10 p-3 text-primary">
-                  <Trophy className="h-8 w-8" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Overall Progress</p>
-                  <p className="text-2xl font-bold">{userData.progress}%</p>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="hover-card p-6">
-              <div className="flex items-center gap-4">
-                <div className="rounded-xl bg-primary/10 p-3 text-primary">
-                  <BookOpen className="h-8 w-8" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Courses Completed</p>
-                  <p className="text-2xl font-bold">{userData.coursesCompleted}</p>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="hover-card p-6">
-              <div className="flex items-center gap-4">
-                <div className="rounded-xl bg-primary/10 p-3 text-primary">
-                  <Users className="h-8 w-8" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Referrals</p>
-                  <p className="text-2xl font-bold">{userData.wallet.referrals}</p>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="hover-card p-6">
-              <div className="flex items-center gap-4">
-                <div className="rounded-xl bg-primary/10 p-3 text-primary">
-                  <Wallet2 className="h-8 w-8" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Earnings</p>
-                  <p className="text-2xl font-bold">${userData.wallet.earnings}</p>
-                </div>
-              </div>
-            </Card>
+            <StatCard title="Overall Progress" value={`${userData.progress}%`} icon={Trophy} />
+            <StatCard title="Courses Completed" value={userData.coursesCompleted} icon={BookOpen} />
+            <StatCard title="Referrals" value={userData.wallet.referrals} icon={Users} />
+            <StatCard title="Total Earnings" value={`$${userData.wallet.earnings}`} icon={Wallet2} />
           </div>
 
           <div className="mt-8 grid gap-6 lg:grid-cols-3">

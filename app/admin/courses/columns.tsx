@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal } from "lucide-react"
 
-export const columns: ColumnDef<any>[] = [
+export const columns: ColumnDef<Course>[] = [
   {
     accessorKey: "name",
     header: "Course Name",
@@ -37,7 +37,7 @@ export const columns: ColumnDef<any>[] = [
     accessorKey: "status",
     header: "Status",
     cell: ({ row }) => (
-      <Badge variant={row.original.status === "active" ? "success" : "destructive"}>
+      <Badge variant={row.original.status === "active" ? "default" : "destructive"}>
         {row.original.status}
       </Badge>
     ),
@@ -63,4 +63,13 @@ export const columns: ColumnDef<any>[] = [
       </DropdownMenu>
     ),
   },
-] 
+]
+
+interface Course {
+  id: string;
+  name: string;
+  plan: string;
+  students: number;
+  status: string;
+  lastUpdated: string;
+} 

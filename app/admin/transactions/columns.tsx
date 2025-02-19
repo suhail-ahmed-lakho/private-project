@@ -29,10 +29,10 @@ export const columns: ColumnDef<any>[] = [
       <Badge
         variant={
           row.original.status === "approved"
-            ? "success"
+            ? "default"
             : row.original.status === "rejected"
             ? "destructive"
-            : "default"
+            : "secondary"
         }
       >
         {row.original.status}
@@ -45,7 +45,7 @@ export const columns: ColumnDef<any>[] = [
       <div className="flex gap-2">
         <Button
           size="sm"
-          variant="success"
+          variant="default"
           className="bg-green-600 hover:bg-green-700"
           onClick={() => console.log("Approve", row.original.id)}
         >

@@ -5,6 +5,7 @@ import { DataTable } from "@/components/ui/data-table"
 import { Button } from "@/components/ui/button"
 import { UserPlus } from "lucide-react"
 import { columns } from "./columns"
+import { useToast } from "@/hooks/use-toast"
 
 interface User {
   id: string
@@ -16,10 +17,10 @@ interface User {
 }
 
 export default function UsersPage() {
+  const { toast } = useToast()
   const [users, setUsers] = useState<User[]>([])
 
   useEffect(() => {
-    // Get user data from localStorage
     const userData = localStorage.getItem("userData")
     if (userData) {
       const user = JSON.parse(userData)
@@ -36,11 +37,19 @@ export default function UsersPage() {
     }
   }, [])
 
+  const handleAction = () => {
+    toast({
+      title: "Success",
+      description: "Action completed successfully",
+      variant: "default",
+    })
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Users</h1>
-        <Button>
+        <Button onClick={handleAction}>
           <UserPlus className="mr-2 h-4 w-4" />
           Add User
         </Button>

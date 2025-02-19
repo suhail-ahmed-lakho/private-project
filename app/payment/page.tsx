@@ -144,10 +144,10 @@ export default function PaymentPage() {
       }, 1500)
 
     } catch (error) {
-      console.error("Payment submission error:", error)
+      console.error("Payment Error:", error)
       toast({
         title: "Error",
-        description: "Failed to submit payment. Please try again.",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
         variant: "destructive"
       })
     } finally {

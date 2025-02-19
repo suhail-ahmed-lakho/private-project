@@ -38,13 +38,11 @@ export const columns: ColumnDef<any>[] = [
   {
     accessorKey: "status",
     header: "Status",
-    cell: ({ row }) => {
-      return (
-        <Badge variant={row.original.status === "active" ? "success" : "destructive"}>
-          {row.original.status}
-        </Badge>
-      )
-    },
+    cell: ({ row }) => (
+      <Badge variant={row.original.status === "active" ? "default" : "destructive"}>
+        {row.original.status}
+      </Badge>
+    )
   },
   {
     id: "actions",

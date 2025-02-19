@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { SiteHeader } from "@/components/site-header"
@@ -10,7 +10,15 @@ import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { Eye, EyeOff, Loader2 } from "lucide-react"
 
-export default function Register() {
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <RegisterContent />
+    </Suspense>
+  )
+}
+
+function RegisterContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
@@ -37,7 +45,16 @@ export default function Register() {
       toast({
         title: "Error",
         description: "Passwords do not match",
-        variant: "destructive",
+        variant: "destructive"
+      })
+      return
+    }
+
+    if (formData.password.length < 8) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 8 characters long",
+        variant: "destructive"
       })
       return
     }

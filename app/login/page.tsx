@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { SiteHeader } from "@/components/site-header"
@@ -10,7 +10,15 @@ import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { Eye, EyeOff, Loader2 } from "lucide-react"
 
-export default function Login() {
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginContent />
+    </Suspense>
+  )
+}
+
+function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
