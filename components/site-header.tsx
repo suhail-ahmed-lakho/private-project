@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
 import { NavigationMenu, NavigationMenuItem, NavigationMenuLink, NavigationMenuList } from "@/components/ui/navigation-menu"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
-import { Wallet2, BookOpen, Users, Phone, Home, Menu } from "lucide-react"
+import { Wallet2, BookOpen, Users, Phone, Home, Menu, LogOut } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -36,7 +36,9 @@ const authenticatedItems = [
 
 export function SiteHeader() {
   const pathname = usePathname()
+  const router = useRouter()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [userName, setUserName] = useState("")
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -45,8 +47,20 @@ export function SiteHeader() {
     setMounted(true)
     const checkAuth = () => {
       const token = localStorage.getItem("token")
+      const userDataStr = localStorage.getItem("userData")
+      
       setIsAuthenticated(!!token)
+      
+      if (userDataStr) {
+        try {
+          const userData = JSON.parse(userDataStr)
+          setUserName(userData.name || "User")
+        } catch (error) {
+          console.error("Error parsing user data:", error)
+        }
+      }
     }
+
     checkAuth()
     window.addEventListener("storage", checkAuth)
 
@@ -63,8 +77,10 @@ export function SiteHeader() {
 
   const handleLogout = () => {
     localStorage.removeItem("token")
+    localStorage.removeItem("userData")
     setIsAuthenticated(false)
-    window.location.href = "/"
+    setUserName("")
+    router.push("/")
   }
 
   // Don't render navigation until mounted to prevent flashing
@@ -143,13 +159,18 @@ export function SiteHeader() {
                   className="relative h-8 w-8 rounded-full ring-2 ring-primary/20 transition-all hover:ring-primary"
                 >
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src="/images/avatar-placeholder.png" alt="User" />
-                    <AvatarFallback>U</AvatarFallback>
+                    <AvatarImage src="/images/avatar-placeholder.png" alt={userName} />
+                    <AvatarFallback>{userName.charAt(0)}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuLabel>
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{userName}</p>
+                    <p className="text-xs leading-none text-muted-foreground">Logged in</p>
+                  </div>
+                </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {authenticatedItems.map(({ href, label, icon: Icon }) => (
                   <DropdownMenuItem key={href} asChild>
@@ -164,6 +185,7 @@ export function SiteHeader() {
                   onClick={handleLogout}
                   className="text-destructive focus:text-destructive"
                 >
+                  <LogOut className="mr-2 h-4 w-4" />
                   Log out
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -203,8 +225,8 @@ export function SiteHeader() {
                     key={href}
                     href={href}
                     className={cn(
-                      "flex items-center space-x-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent",
-                      pathname === href && "bg-accent"
+                      "flex items-center space-x-2 text-sm font-medium",
+                      pathname === href && "text-primary"
                     )}
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
@@ -212,6 +234,16 @@ export function SiteHeader() {
                     <span>{label}</span>
                   </Link>
                 ))}
+                {!isAuthenticated && (
+                  <div className="flex flex-col space-y-2">
+                    <Button asChild variant="ghost" className="justify-start">
+                      <Link href="/login">Login</Link>
+                    </Button>
+                    <Button asChild>
+                      <Link href="/register">Get Started</Link>
+                    </Button>
+                  </div>
+                )}
               </div>
             </SheetContent>
           </Sheet>

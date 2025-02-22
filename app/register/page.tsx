@@ -64,16 +64,19 @@ function RegisterContent() {
     setLoading(true)
     
     try {
-      localStorage.setItem("userName", formData.fullName)
-      
       const userData = {
         name: formData.fullName,
         email: formData.email,
         occupation: formData.occupation,
         registrationDate: new Date().toISOString()
       }
-      localStorage.setItem("userData", JSON.stringify(userData))
+
+      // Set auth data
       localStorage.setItem("token", "mock-token")
+      localStorage.setItem("userData", JSON.stringify(userData))
+      
+      // Trigger storage event for header update
+      window.dispatchEvent(new Event('storage'))
 
       if (referralCode) {
         localStorage.setItem("usedReferralCode", referralCode)
@@ -99,7 +102,7 @@ function RegisterContent() {
       toast({
         title: "Error",
         description: "Something went wrong. Please try again.",
-        variant: "destructive",
+        variant: "destructive"
       })
     } finally {
       setLoading(false)

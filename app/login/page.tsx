@@ -51,8 +51,12 @@ function LoginContent() {
             email: formData.email,
           }
       
+      // Set auth data
       localStorage.setItem("token", "mock-token")
       localStorage.setItem("userData", JSON.stringify(userData))
+      
+      // Trigger storage event for header update
+      window.dispatchEvent(new Event('storage'))
       
       toast({
         title: "Login Successful",
