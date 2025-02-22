@@ -232,56 +232,7 @@ const generateReferralCode = () => {
   return code;
 };
 
-const ReferralCodeCard = () => {
-  const [copied, setCopied] = useState(false);
-  const [referralCode, setReferralCode] = useState<string>("");
-
-  useEffect(() => {
-    // Try to get existing referral code from localStorage
-    let code = localStorage.getItem('myReferralCode');
-    
-    // If no code exists, generate a new one
-    if (!code) {
-      code = generateReferralCode();
-      localStorage.setItem('myReferralCode', code);
-      
-      // Store this code in the list of valid referral codes
-      const storedCodes = JSON.parse(localStorage.getItem('referralCodes') || '[]');
-      storedCodes.push(code);
-      localStorage.setItem('referralCodes', JSON.stringify(storedCodes));
-    }
-    
-    setReferralCode(code);
-  }, []);
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(referralCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast.success("Referral code copied!");
-  };
-
-  return (
-    <Card className="col-span-3">
-      <CardHeader>
-        <CardTitle className="text-xl font-bold">Your Referral Code</CardTitle>
-        <CardDescription>Share this code with friends to earn rewards</CardDescription>
-      </CardHeader>
-      <CardContent className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="text-lg px-4 py-2">
-            {referralCode || "Loading..."}
-          </Badge>
-        </div>
-        <Button onClick={copyToClipboard} variant="outline">
-          {copied ? "Copied!" : "Copy Code"}
-        </Button>
-      </CardContent>
-    </Card>
-  );
-};
-
-export default function DashboardPage() {
+const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState("overview")
   const [userName, setUserName] = useState<string>("")
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
@@ -304,11 +255,12 @@ export default function DashboardPage() {
     ifscCode: ''
   })
   const [cryptoDetails, setCryptoDetails] = useState({
-    trc20Address: '',
-    bep20Address: ''
+    network: '',
+    address: ''
   })
   const [isWithdrawing, setIsWithdrawing] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [amountError, setAmountError] = useState('')
   const [referralData, setReferralData] = useState<ReferralStats>({
     myReferralCode: '',
     code: '',
@@ -428,6 +380,25 @@ export default function DashboardPage() {
       }
     }
 
+    // Initialize or get existing referral code
+    let code = localStorage.getItem('myReferralCode')
+    if (!code) {
+      code = generateReferralCode()
+      localStorage.setItem('myReferralCode', code)
+      
+      // Store this code in the list of valid referral codes
+      const storedCodes = JSON.parse(localStorage.getItem('referralCodes') || '[]')
+      storedCodes.push(code)
+      localStorage.setItem('referralCodes', JSON.stringify(storedCodes))
+    }
+
+    // Update referral data state
+    setReferralData(prev => ({
+      ...prev,
+      myReferralCode: code,
+      code: code
+    }))
+
     // Add loading state
     const fetchData = async () => {
       try {
@@ -440,76 +411,24 @@ export default function DashboardPage() {
     }
     fetchData()
 
-    // Load or generate referral code
-    let code = localStorage.getItem('referralCode');
-    
-    if (!code) {
-      const userName = localStorage.getItem('userName') || 'USER';
-      const prefix = userName.slice(0, 3).toUpperCase();
-      const random = Math.random().toString(36).substring(2, 7).toUpperCase();
-      code = `${prefix}${random}`;
-      
-      // Store the new code
-      localStorage.setItem('referralCode', code);
-      
-      // Initialize or update the list of valid codes
-      const allCodes = JSON.parse(localStorage.getItem('validReferralCodes') || '[]');
-      if (!allCodes.includes(code)) {
-        allCodes.push(code);
-        localStorage.setItem('validReferralCodes', JSON.stringify(allCodes));
-      }
-    } else {
-      // Make sure existing code is in the valid codes list
-      const allCodes = JSON.parse(localStorage.getItem('validReferralCodes') || '[]');
-      if (!allCodes.includes(code)) {
-        allCodes.push(code);
-        localStorage.setItem('validReferralCodes', JSON.stringify(allCodes));
-      }
-    }
-
-    // Update referral data state
-    const fetchReferralData = async () => {
-      try {
-        const response = await fetch(`/api/referrals?code=${code}`);
-        if (!response.ok) throw new Error('Failed to fetch referrals');
-
-        const data = await response.json();
-        const referrals = data.referrals;
-
-        setReferralData({
-          myReferralCode: code,
-          code: code,
-          totalReferrals: referrals.length,
-          activeReferrals: referrals.filter(r => r.status === 'active').length,
-          earnings: referrals.reduce((sum, r) => sum + (r.earnings || 0), 0),
-          currentTier: {
-            threshold: 0,
-            bonus: 0
-          },
-          milestones: {
-            achieved: [],
-            next: {
-              referrals: 5,
-              reward: {
-                type: 'bonus',
-                value: 10
-              },
-              remaining: 5
-            }
-          },
-          referredUsers: referrals
-        });
-      } catch (error) {
-        console.error('Error fetching referral data:', error);
-      }
-    };
-
-    fetchReferralData();
-
     // Set up storage event listener
-    window.addEventListener('storage', fetchReferralData);
-    return () => window.removeEventListener('storage', fetchReferralData);
-  }, [])
+    window.addEventListener('storage', () => {
+      const code = localStorage.getItem('myReferralCode');
+      setReferralData(prev => ({
+        ...prev,
+        myReferralCode: code,
+        code: code
+      }));
+    });
+    return () => window.removeEventListener('storage', () => {
+      const code = localStorage.getItem('myReferralCode');
+      setReferralData(prev => ({
+        ...prev,
+        myReferralCode: code,
+        code: code
+      }));
+    });
+  }, [router])
 
   const handleWithdrawSubmit = async () => {
     if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) {
@@ -562,8 +481,8 @@ export default function DashboardPage() {
       ifscCode: ''
     })
     setCryptoDetails({
-      trc20Address: '',
-      bep20Address: ''
+      network: '',
+      address: ''
     })
   }
 
@@ -701,11 +620,8 @@ export default function DashboardPage() {
             <StatCard title="Overall Progress" value={`${userData.progress}%`} icon={Trophy} />
             <StatCard title="Courses Completed" value={userData.coursesCompleted} icon={BookOpen} />
             <StatCard title="Total Earnings" value={`$${totalEarnings}`} icon={DollarSign} />
-            <StatCard title="Active Referrals" value={userData.referralStats?.activeReferrals || 0} icon={UserCheck} />
-            <StatCard title="Total Referrals" value={userData.referralStats?.totalReferrals || 0} icon={Users} />
+            <StatCard title="Active Referrals" value={referralData.activeReferrals} icon={UserCheck} />
           </div>
-
-          <ReferralCodeCard />
 
           <div className="mt-8 grid gap-6 lg:grid-cols-3">
             <Card className="col-span-2 p-6">
@@ -755,193 +671,224 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          <Card className="mt-8 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold">Your Referral Program</h2>
-            </div>
-
-            <Card className="mt-8">
-              <CardHeader>
-                <CardTitle>Your Referral Program</CardTitle>
-                <CardDescription>
-                  Share your referral code with friends and earn rewards
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col gap-6">
-                  {/* Referral Code */}
-                  <div className="flex items-center gap-4">
-                    <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-lg font-semibold">
-                      {referralData.myReferralCode || 'Generating...'}
-                    </code>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        const code = referralData.myReferralCode;
-                        if (code) {
-                          navigator.clipboard.writeText(`${window.location.origin}/register?ref=${code}`);
-                          toast({
-                            title: "Copied!",
-                            description: "Referral link copied to clipboard",
-                          });
-                        }
-                      }}
-                      disabled={!referralData.myReferralCode}
-                    >
-                      Copy Referral Link
-                    </Button>
-                    <Button onClick={addTestReferral}>
-                      Test Add Referral
-                    </Button>
-                  </div>
-
-                  {/* Referral Stats */}
-                  <div className="grid gap-6 md:grid-cols-4">
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">Total Referrals</p>
-                      <p className="text-2xl font-bold">{referralData.totalReferrals}</p>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">Active Referrals</p>
-                      <p className="text-2xl font-bold">{referralData.activeReferrals}</p>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">Current Bonus</p>
-                      <p className="text-2xl font-bold text-green-600">
-                        {referralData.currentTier.bonus}
-                        {selectedPlan?.referralBonus.type === 'percentage' ? '%' : '$'}
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">Total Earnings</p>
-                      <p className="text-2xl font-bold text-green-600">
-                        ${referralData.earnings.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Next Tier Progress */}
-                  {referralData.nextTier && (
-                    <Card className="p-4 mt-6">
-                      <h4 className="font-semibold mb-2">Next Tier Progress</h4>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>
-                            {referralData.totalReferrals} / {referralData.nextTier.threshold} Referrals
-                          </span>
-                          <span className="text-muted-foreground">
-                            {referralData.nextTier.remaining} more to unlock {referralData.nextTier.bonus}
-                            {selectedPlan?.referralBonus.type === 'percentage' ? '%' : '$'} bonus
-                          </span>
-                        </div>
-                        <Progress
-                          value={(referralData.totalReferrals / referralData.nextTier.threshold) * 100}
-                          className="h-2"
-                        />
+          {/* Referral Program */}
+          <Card className="mt-8">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Referral Program</CardTitle>
+                  <CardDescription>
+                    Earn rewards by inviting friends to join our platform
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-3">
+                  <code className="relative rounded bg-muted px-3 py-2 font-mono text-sm">
+                    {referralData.myReferralCode || 'Loading...'}
+                  </code>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const code = referralData.myReferralCode;
+                      if (code) {
+                        navigator.clipboard.writeText(`${window.location.origin}/register?ref=${code}`);
+                        toast.success("Referral link copied to clipboard");
+                      }
+                    }}
+                    disabled={!referralData.myReferralCode}
+                  >
+                    Copy Link
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-6">
+                {/* Referral Stats */}
+                <div className="grid gap-4 md:grid-cols-4">
+                  <Card className="p-4 bg-muted/50">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Total Referrals</p>
+                        <p className="text-2xl font-bold">{referralData.totalReferrals}</p>
                       </div>
-                    </Card>
-                  )}
-
-                  {/* Milestones */}
-                  <div className="space-y-4 mt-6">
-                    <h4 className="font-semibold">Milestones</h4>
-                    
-                    {/* Achieved Milestones */}
-                    {referralData.milestones.achieved.length > 0 && (
-                      <div className="space-y-2">
-                        <p className="text-sm text-muted-foreground">Achieved</p>
-                        <div className="grid gap-4 md:grid-cols-2">
-                          {referralData.milestones.achieved.map((milestone, index) => (
-                            <Card key={index} className="p-4 bg-muted/50">
-                              <div className="flex items-center gap-2">
-                                <Award className="h-5 w-5 text-green-600" />
-                                <div>
-                                  <p className="font-medium">
-                                    {milestone.referrals} Referrals Achievement
-                                  </p>
-                                  <p className="text-sm text-muted-foreground">
-                                    Reward: {milestone.reward.type === 'bonus' 
-                                      ? `$${milestone.reward.value} Bonus` 
-                                      : milestone.reward.type === 'planUpgrade'
-                                      ? `Free upgrade to ${milestone.reward.value} Plan`
-                                      : `Free access to ${milestone.reward.value}`}
-                                  </p>
-                                </div>
-                              </div>
-                            </Card>
-                          ))}
-                        </div>
+                    </div>
+                  </Card>
+                  <Card className="p-4 bg-muted/50">
+                    <div className="flex items-center gap-2">
+                      <UserCheck className="h-5 w-5 text-green-600" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Active Referrals</p>
+                        <p className="text-2xl font-bold">{referralData.activeReferrals}</p>
                       </div>
-                    )}
+                    </div>
+                  </Card>
+                  <Card className="p-4 bg-muted/50">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-blue-600" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Current Bonus</p>
+                        <p className="text-2xl font-bold text-blue-600">
+                          {referralData.currentTier.bonus}
+                          {selectedPlan?.referralBonus.type === 'percentage' ? '%' : '$'}
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                  <Card className="p-4 bg-muted/50">
+                    <div className="flex items-center gap-2">
+                      <Wallet2 className="h-5 w-5 text-green-600" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Total Earnings</p>
+                        <p className="text-2xl font-bold text-green-600">
+                          ${referralData.earnings.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
 
-                    {/* Next Milestone */}
-                    {referralData.milestones.next && (
-                      <div className="space-y-2">
-                        <p className="text-sm text-muted-foreground">Next Milestone</p>
-                        <Card className="p-4">
-                          <div className="flex items-center gap-2">
-                            <Trophy className="h-5 w-5 text-yellow-600" />
+                {/* Next Tier Progress */}
+                {referralData.nextTier && (
+                  <Card className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h4 className="text-lg font-semibold">Next Milestone</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {referralData.nextTier.remaining} more referrals to unlock {referralData.nextTier.bonus}
+                          {selectedPlan?.referralBonus.type === 'percentage' ? '%' : '$'} bonus
+                        </p>
+                      </div>
+                      <Trophy className="h-8 w-8 text-yellow-600" />
+                    </div>
+                    <div className="space-y-2">
+                      <Progress
+                        value={(referralData.totalReferrals / referralData.nextTier.threshold) * 100}
+                        className="h-2"
+                      />
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium">{referralData.totalReferrals} Referrals</span>
+                        <span className="text-muted-foreground">Goal: {referralData.nextTier.threshold}</span>
+                      </div>
+                    </div>
+                  </Card>
+                )}
+
+                {/* Milestones */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-lg font-semibold">Milestones</h4>
+                    <Award className="h-5 w-5 text-primary" />
+                  </div>
+                  
+                  {/* Achieved Milestones */}
+                  {referralData.milestones.achieved.length > 0 && (
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {referralData.milestones.achieved.map((milestone, index) => (
+                        <Card key={index} className="p-4 bg-green-50 dark:bg-green-950/50 border-green-200 dark:border-green-800">
+                          <div className="flex items-center gap-3">
+                            <div className="rounded-full bg-green-100 dark:bg-green-900 p-2">
+                              <Award className="h-5 w-5 text-green-600 dark:text-green-400" />
+                            </div>
                             <div>
                               <p className="font-medium">
-                                {referralData.milestones.next.referrals} Referrals Goal
+                                {milestone.referrals} Referrals Achievement
                               </p>
                               <p className="text-sm text-muted-foreground">
-                                Reward: {referralData.milestones.next.reward.type === 'bonus' 
-                                  ? `$${referralData.milestones.next.reward.value} Bonus` 
-                                  : referralData.milestones.next.reward.type === 'planUpgrade'
-                                  ? `Free upgrade to ${referralData.milestones.next.reward.value} Plan`
-                                  : `Free access to ${referralData.milestones.next.reward.value}`}
-                              </p>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {referralData.milestones.next.remaining} more referrals needed
-                              </p>
-                            </div>
-                          </div>
-                          <Progress
-                            value={((referralData.milestones.next.referrals - referralData.milestones.next.remaining) / referralData.milestones.next.referrals) * 100}
-                            className="h-2 mt-3"
-                          />
-                        </Card>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Referred Users List */}
-                  <div className="space-y-4 mt-6">
-                    <h4 className="font-semibold">Recent Referrals</h4>
-                    <div className="space-y-2">
-                      {referralData.referredUsers.map((user, index) => (
-                        <Card key={index} className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <UserCheck className={`h-5 w-5 ${
-                                user.status === 'active' ? 'text-green-600' : 'text-yellow-600'
-                              }`} />
-                              <div>
-                                <p className="font-medium">{user.name}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  Joined {new Date(user.joinedDate).toLocaleDateString()}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
-                                {user.status}
-                              </Badge>
-                              <p className="text-sm text-muted-foreground mt-1">{user.plan}</p>
-                              <p className="text-sm text-green-600">
-                                ${user.discount} discount applied
+                                {milestone.reward.type === 'bonus' 
+                                  ? `$${milestone.reward.value} Bonus` 
+                                  : milestone.reward.type === 'planUpgrade'
+                                  ? `Free upgrade to ${milestone.reward.value} Plan`
+                                  : `Free access to ${milestone.reward.value}`}
                               </p>
                             </div>
                           </div>
                         </Card>
                       ))}
                     </div>
+                  )}
+
+                  {/* Next Milestone */}
+                  {referralData.milestones.next && (
+                    <Card className="p-4 bg-blue-50 dark:bg-blue-950/50 border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-full bg-blue-100 dark:bg-blue-900 p-2">
+                          <Trophy className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <p className="font-medium">Next Achievement</p>
+                            <span className="text-sm text-muted-foreground">
+                              {referralData.milestones.next.remaining} more needed
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {referralData.milestones.next.reward.type === 'bonus' 
+                              ? `$${referralData.milestones.next.reward.value} Bonus` 
+                              : referralData.milestones.next.reward.type === 'planUpgrade'
+                              ? `Free upgrade to ${referralData.milestones.next.reward.value} Plan`
+                              : `Free access to ${referralData.milestones.next.reward.value}`}
+                          </p>
+                          <Progress
+                            value={((referralData.milestones.next.referrals - referralData.milestones.next.remaining) / referralData.milestones.next.referrals) * 100}
+                            className="h-1.5 mt-2"
+                          />
+                        </div>
+                      </div>
+                    </Card>
+                  )}
+                </div>
+
+                {/* Referred Users List */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-lg font-semibold">Recent Referrals</h4>
+                    <Users className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="space-y-3">
+                    {referralData.referredUsers.map((user, index) => (
+                      <Card key={index} className="p-4 hover:bg-muted/50 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`rounded-full p-2 ${
+                              user.status === 'active' 
+                                ? 'bg-green-100 dark:bg-green-900' 
+                                : 'bg-yellow-100 dark:bg-yellow-900'
+                            }`}>
+                              <UserCheck className={`h-4 w-4 ${
+                                user.status === 'active' 
+                                  ? 'text-green-600 dark:text-green-400' 
+                                  : 'text-yellow-600 dark:text-yellow-400'
+                              }`} />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium">{user.name}</p>
+                                <Badge variant={user.status === 'active' ? 'default' : 'secondary'} className="text-xs">
+                                  {user.status}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                Joined {new Date(user.joinedDate).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-medium">{user.plan}</p>
+                            <p className="text-sm text-green-600">
+                              ${user.discount} discount applied
+                            </p>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </CardContent>
           </Card>
+
         </TabsContent>
 
         <TabsContent value="courses">
@@ -979,10 +926,7 @@ export default function DashboardPage() {
             <Card className="p-6">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h2 className="text-xl font-semibold flex items-center gap-2">
-                    <Wallet className="h-5 w-5" />
-                    Wallet Balance
-                  </h2>
+                  <h2 className="text-xl font-semibold">Wallet Balance</h2>
                   <p className="text-3xl font-bold mt-2 text-green-600">
                     ${walletBalance.toFixed(2)}
                   </p>
@@ -1137,146 +1081,266 @@ export default function DashboardPage() {
       </div>
 
       <Dialog open={isWithdrawDialogOpen} onOpenChange={setIsWithdrawDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="text-center text-xl font-bold">
-              STUDENT WITHDRAWAL FROM
-            </DialogTitle>
-          </DialogHeader>
-          
-          {/* Make this div scrollable */}
-          <div className="flex-1 overflow-y-auto pr-2">
-            {/* Amount Section */}
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-              <div className="space-y-2">
-                <h3 className="font-bold text-lg">Withdrawal Amount</h3>
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-medium">Available Balance: ${walletBalance.toFixed(2)}</span>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Amount to Withdraw:</label>
-                  <Input
-                    type="number"
-                    value={withdrawAmount}
-                    onChange={(e) => setWithdrawAmount(e.target.value)}
-                    placeholder="Enter amount"
-                    min="0"
-                    max={walletBalance}
-                    className="mt-1"
-                  />
-                  {parseFloat(withdrawAmount) > walletBalance && (
-                    <p className="text-red-500 text-sm mt-1">
-                      Amount exceeds available balance
-                    </p>
-                  )}
-                </div>
+        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden flex flex-col max-h-[85vh]">
+          <div className="px-6 py-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <DialogTitle className="text-xl font-semibold tracking-tight">Withdraw Funds</DialogTitle>
+            <DialogDescription className="mt-2.5">
+              <div className="flex items-center gap-2.5 bg-muted/50 p-3 rounded-lg">
+                <Wallet2 className="h-5 w-5 text-green-600" />
+                <span className="text-sm">Available Balance: <span className="font-semibold text-green-600">${walletBalance.toFixed(2)}</span></span>
               </div>
-            </div>
-
-            {/* Method Selection */}
-            <div className="mb-6 sticky top-0 bg-white z-10">
-              <div className="flex gap-4 mb-4">
-                <Button
-                  type="button"
-                  variant={withdrawalMethod === 'bank' ? 'default' : 'outline'}
-                  onClick={() => setWithdrawalMethod('bank')}
-                  className="flex-1"
-                >
-                  Bank Transfer
-                </Button>
-                <Button
-                  type="button"
-                  variant={withdrawalMethod === 'crypto' ? 'default' : 'outline'}
-                  onClick={() => setWithdrawalMethod('crypto')}
-                  className="flex-1"
-                >
-                  Crypto Currency
-                </Button>
-              </div>
-            </div>
-
-            {/* Conditional Rendering of Details */}
-            {withdrawalMethod === 'bank' ? (
-              <div className="space-y-4">
-                <h3 className="font-bold">BANK DETAILS :</h3>
-                <div>
-                  <label className="text-sm font-medium">NAME :</label>
-                  <Input
-                    type="text"
-                    value={bankDetails.name}
-                    onChange={(e) => setBankDetails({...bankDetails, name: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">BANK NAME :</label>
-                  <Input
-                    type="text"
-                    value={bankDetails.bankName}
-                    onChange={(e) => setBankDetails({...bankDetails, bankName: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">ACCOUNT NO :</label>
-                  <Input
-                    type="text"
-                    value={bankDetails.accountNo}
-                    onChange={(e) => setBankDetails({...bankDetails, accountNo: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">IFSC CODE :</label>
-                  <Input
-                    type="text"
-                    value={bankDetails.ifscCode}
-                    onChange={(e) => setBankDetails({...bankDetails, ifscCode: e.target.value})}
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <h3 className="font-bold">CRYPTO CURRENCY :</h3>
-                <div>
-                  <p className="text-sm font-medium">DEPOSIT NETWORK (TRX)</p>
-                  <p className="font-medium">TRON (TRC20)</p>
-                  <Input
-                    type="text"
-                    value={cryptoDetails.trc20Address}
-                    onChange={(e) => setCryptoDetails({...cryptoDetails, trc20Address: e.target.value})}
-                    placeholder="Enter TRC20 address"
-                  />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">DEPOSIT NETWORK (BNB)</p>
-                  <p className="font-medium">BNB smart chain (BEP20)</p>
-                  <Input
-                    type="text"
-                    value={cryptoDetails.bep20Address}
-                    onChange={(e) => setCryptoDetails({...cryptoDetails, bep20Address: e.target.value})}
-                    placeholder="Enter BEP20 address"
-                  />
-                </div>
-              </div>
-            )}
+            </DialogDescription>
           </div>
 
-          <DialogFooter className="mt-4">
-            <Button 
-              onClick={handleWithdrawSubmit} 
-              disabled={isWithdrawing || !withdrawAmount || parseFloat(withdrawAmount) > walletBalance} 
-              className="w-full"
-            >
-              {isWithdrawing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                'Submit Withdrawal Request'
+          <div className="flex-1 overflow-y-auto">
+            <div className="px-6 py-6 space-y-6">
+              {/* Amount Input */}
+              <div className="space-y-2.5">
+                <label className="text-sm font-medium flex items-center gap-2" htmlFor="withdrawAmount">
+                  Amount to Withdraw
+                  <span className="inline-flex items-center justify-center rounded-full bg-muted/50 w-4 h-4 text-xs" title="Minimum withdrawal: $10">?</span>
+                </label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="withdrawAmount"
+                    type="number"
+                    value={withdrawAmount}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setWithdrawAmount(value);
+                      // Clear error when user starts typing
+                      if (amountError) setAmountError('');
+                    }}
+                    onBlur={() => {
+                      const amount = parseFloat(withdrawAmount);
+                      if (amount < 10) {
+                        setAmountError('Minimum withdrawal amount is $10');
+                      } else if (amount > walletBalance) {
+                        setAmountError('Amount exceeds available balance');
+                      }
+                    }}
+                    className={`pl-10 h-11 text-lg ${amountError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                    placeholder="0.00"
+                    min="10"
+                    max={walletBalance}
+                    step="0.01"
+                  />
+                </div>
+                {amountError && (
+                  <p className="text-sm text-red-500 mt-1.5 flex items-center gap-1.5">
+                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
+                      <path d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z" fill="currentColor"/>
+                      <path d="M7.5 8.5C7.22386 8.5 7 8.27614 7 8V4C7 3.72386 7.22386 3.5 7.5 3.5C7.77614 3.5 8 3.72386 8 4V8C8 8.27614 7.77614 8.5 7.5 8.5Z" fill="currentColor"/>
+                      <path d="M7.5 11C7.77614 11 8 10.7761 8 10.5C8 10.2239 7.77614 10 7.5 10C7.22386 10 7 10.2239 7 10.5C7 10.7761 7.22386 11 7.5 11Z" fill="currentColor"/>
+                    </svg>
+                    {amountError}
+                  </p>
+                )}
+              </div>
+
+              {/* Method Selection */}
+              <div className="space-y-2.5">
+                <label className="text-sm font-medium">Select Withdrawal Method</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <Button
+                    type="button"
+                    variant={withdrawalMethod === 'bank' ? 'default' : 'outline'}
+                    className={`h-24 relative ${withdrawalMethod === 'bank' ? 'bg-primary/10 hover:bg-primary/20 border-primary' : 'hover:bg-muted/50'}`}
+                    onClick={() => setWithdrawalMethod('bank')}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 21H21M3 18H21M6 10V14M10 10V14M14 10V14M18 10V14M3 7L12 3L21 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      <span className="font-medium text-sm">Bank Transfer</span>
+                      <span className="text-xs text-muted-foreground">2-3 business days</span>
+                    </div>
+                    {withdrawalMethod === 'bank' && (
+                      <div className="absolute top-2 right-2 text-primary">
+                        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"/>
+                      </svg>
+                    </div>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={withdrawalMethod === 'crypto' ? 'default' : 'outline'}
+                    className={`h-24 relative ${withdrawalMethod === 'crypto' ? 'bg-primary/10 hover:bg-primary/20 border-primary' : 'hover:bg-muted/50'}`}
+                    onClick={() => setWithdrawalMethod('crypto')}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <svg className="h-8 w-8" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9.5 2C9.5 2 16.5 6.5 16.5 12C16.5 17.5 9.5 22 9.5 22M6.5 3C6.5 3 15.5 9 15.5 12C15.5 15 6.5 20.5 6.5 20.5M3.5 5C3.5 5 14.5 11.5 14.5 12C14.5 12.5 3.5 19 3.5 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      <span className="font-medium text-sm">Cryptocurrency</span>
+                      <span className="text-xs text-muted-foreground">Instant transfer</span>
+                    </div>
+                    {withdrawalMethod === 'crypto' && (
+                      <div className="absolute top-2 right-2 text-primary">
+                        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"/>
+                      </svg>
+                    </div>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Bank Form */}
+              {withdrawalMethod === 'bank' && (
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="px-4 py-2.5 bg-muted/50 border-b">
+                    <h3 className="font-medium text-sm">Bank Account Details</h3>
+                  </div>
+                  <div className="p-4 space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium" htmlFor="accountName">
+                        Account Holder Name
+                      </label>
+                      <Input
+                        id="accountName"
+                        value={bankDetails.name}
+                        onChange={(e) => setBankDetails({ ...bankDetails, name: e.target.value })}
+                        placeholder="Enter account holder name"
+                        className="h-10"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium" htmlFor="bankName">
+                        Bank Name
+                      </label>
+                      <Input
+                        id="bankName"
+                        value={bankDetails.bankName}
+                        onChange={(e) => setBankDetails({ ...bankDetails, bankName: e.target.value })}
+                        placeholder="Enter bank name"
+                        className="h-10"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium" htmlFor="accountNo">
+                          Account Number
+                        </label>
+                        <Input
+                          id="accountNo"
+                          value={bankDetails.accountNo}
+                          onChange={(e) => setBankDetails({ ...bankDetails, accountNo: e.target.value })}
+                          placeholder="Enter account number"
+                          className="h-10"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium" htmlFor="ifscCode">
+                          IFSC Code
+                        </label>
+                        <Input
+                          id="ifscCode"
+                          value={bankDetails.ifscCode}
+                          onChange={(e) => setBankDetails({ ...bankDetails, ifscCode: e.target.value })}
+                          placeholder="Enter IFSC code"
+                          className="h-10"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
-            </Button>
+
+              {/* Crypto Form */}
+              {withdrawalMethod === 'crypto' && (
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="px-4 py-2.5 bg-muted/50 border-b">
+                    <h3 className="font-medium text-sm">Cryptocurrency Details</h3>
+                  </div>
+                  <div className="p-4 space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Select Network</label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="relative">
+                          <Button
+                            type="button"
+                            variant={cryptoDetails.network === 'TRC20' ? 'default' : 'outline'}
+                            className={`h-16 w-full ${cryptoDetails.network === 'TRC20' ? 'bg-primary/10 hover:bg-primary/20 border-primary' : 'hover:bg-muted/50'}`}
+                            onClick={() => setCryptoDetails({ ...cryptoDetails, network: 'TRC20' })}
+                          >
+                            <div className="text-left">
+                              <div className="font-medium">TRC20</div>
+                              <div className="text-xs text-muted-foreground">USDT on Tron Network</div>
+                            </div>
+                          </Button>
+                        </div>
+                        <div className="relative">
+                          <Button
+                            type="button"
+                            variant={cryptoDetails.network === 'BEP20' ? 'default' : 'outline'}
+                            className={`h-16 w-full ${cryptoDetails.network === 'BEP20' ? 'bg-primary/10 hover:bg-primary/20 border-primary' : 'hover:bg-muted/50'}`}
+                            onClick={() => setCryptoDetails({ ...cryptoDetails, network: 'BEP20' })}
+                          >
+                            <div className="text-left">
+                              <div className="font-medium">BEP20</div>
+                              <div className="text-xs text-muted-foreground">USDT on BSC Network</div>
+                            </div>
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium" htmlFor="cryptoAddress">
+                        Wallet Address
+                      </label>
+                      <Input
+                        id="cryptoAddress"
+                        value={cryptoDetails.address}
+                        onChange={(e) => setCryptoDetails({ ...cryptoDetails, address: e.target.value })}
+                        placeholder={`Enter your ${cryptoDetails.network || 'wallet'} address`}
+                        className="h-10 font-mono text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="px-6 py-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="flex justify-end gap-3">
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  setIsWithdrawDialogOpen(false)
+                  resetForm()
+                }}
+                disabled={isWithdrawing}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleWithdrawSubmit}
+                disabled={isWithdrawing || !withdrawAmount || parseFloat(withdrawAmount) <= 0 || parseFloat(withdrawAmount) > walletBalance}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {isWithdrawing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Withdraw'
+                )}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   )
 }
+
+export default DashboardPage
