@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -36,8 +35,6 @@ export default function Contact() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader />
-      
       <main className="flex-1">
         {/* Hero Section */}
         <div className="bg-primary py-16 text-primary-foreground">

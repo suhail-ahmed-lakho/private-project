@@ -1,7 +1,5 @@
 "use client"
 
-import { SiteHeader } from "@/components/site-header"
-import { Card } from "@/components/ui/card"
 import {
   BookOpen,
   Signal,
@@ -18,6 +16,7 @@ import {
   Shield,
   Clock
 } from "lucide-react"
+import { Card } from "@/components/ui/card"
 
 const services = [
   {
@@ -105,8 +104,6 @@ const services = [
 export default function ServicesPage() {
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader />
-      
       <main className="flex-1">
         <div className="bg-primary py-16 text-primary-foreground">
           <div className="container text-center">

@@ -3,7 +3,6 @@
 import { useState, Suspense } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -87,8 +86,6 @@ function LoginContent() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader />
-      
       <main className="flex-1">
         <div className="container flex items-center justify-center py-8 sm:py-16">
           <Card className="w-full max-w-md p-4 sm:p-6">

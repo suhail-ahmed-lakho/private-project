@@ -2,8 +2,10 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { ThemeProvider } from "@/components/theme-provider";
-import { ToastProvider } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster"
+import { ToastProvider } from "@radix-ui/react-toast";
+import { Footer } from "@/components/footer";
+import { HeaderWrapper } from "@/components/header-wrapper";
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -30,9 +32,14 @@ export default function RootLayout({
           attribute="class"
           defaultTheme="system"
           enableSystem
+          suppressHydrationWarning
         >
-          <ToastProvider>
-            {children}
+          <ToastProvider swipeDirection="right">
+            <HeaderWrapper />
+            <main className="min-h-screen">
+              {children}
+            </main>
+            <Footer />
           </ToastProvider>
           <Toaster />
         </ThemeProvider>

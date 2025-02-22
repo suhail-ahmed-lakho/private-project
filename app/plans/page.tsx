@@ -1,12 +1,60 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Check, Crown, Star } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import toast from 'react-hot-toast';
 
-const plans = [
+interface Plan {
+  name: string;
+  price: number;
+  duration: string;
+  features: string[];
+  stipend?: {
+    amount: number;
+    months: number;
+  } | null;
+  referralBonus: {
+    amount: number;
+    type: 'percentage' | 'fixed';
+    tiers: {
+      threshold: number;
+      bonus: number;
+    }[];
+    milestoneRewards: {
+      referrals: number;
+      reward: {
+        type: 'bonus' | 'courseAccess' | 'planUpgrade';
+        value: string | number;
+      };
+    }[];
+  };
+}
+
+interface PlanWithReferral extends Plan {
+  discountApplied?: boolean;
+  originalPrice?: number;
+  referralBonus: {
+    amount: number;
+    type: 'percentage' | 'fixed';
+    tiers: {
+      threshold: number;
+      bonus: number;
+    }[];
+    milestoneRewards: {
+      referrals: number;
+      reward: {
+        type: 'bonus' | 'courseAccess' | 'planUpgrade';
+        value: string | number;
+      };
+    }[];
+  };
+}
+
+const plans: PlanWithReferral[] = [
   {
     name: "Basic",
     price: 30,
@@ -17,7 +65,26 @@ const plans = [
       "24/7 Customer Support",
       "Crypto Signal Access"
     ],
-    stipend: null
+    stipend: null,
+    referralBonus: {
+      amount: 5,
+      type: 'fixed',
+      tiers: [
+        { threshold: 3, bonus: 7 },
+        { threshold: 5, bonus: 10 },
+        { threshold: 10, bonus: 15 }
+      ],
+      milestoneRewards: [
+        { 
+          referrals: 5,
+          reward: { type: 'bonus', value: 25 }
+        },
+        {
+          referrals: 10,
+          reward: { type: 'planUpgrade', value: 'Standard' }
+        }
+      ]
+    }
   },
   {
     name: "Standard",
@@ -29,7 +96,26 @@ const plans = [
       "24/7 Customer Support",
       "Crypto Signal Access"
     ],
-    stipend: null
+    stipend: null,
+    referralBonus: {
+      amount: 10,
+      type: 'percentage',
+      tiers: [
+        { threshold: 3, bonus: 12 },
+        { threshold: 5, bonus: 15 },
+        { threshold: 10, bonus: 20 }
+      ],
+      milestoneRewards: [
+        { 
+          referrals: 5,
+          reward: { type: 'bonus', value: 50 }
+        },
+        {
+          referrals: 10,
+          reward: { type: 'planUpgrade', value: 'Premium' }
+        }
+      ]
+    }
   },
   {
     name: "Premium",
@@ -44,6 +130,25 @@ const plans = [
     stipend: {
       amount: 6,
       months: 3
+    },
+    referralBonus: {
+      amount: 15,
+      type: 'percentage',
+      tiers: [
+        { threshold: 3, bonus: 18 },
+        { threshold: 5, bonus: 20 },
+        { threshold: 10, bonus: 25 }
+      ],
+      milestoneRewards: [
+        { 
+          referrals: 5,
+          reward: { type: 'bonus', value: 100 }
+        },
+        {
+          referrals: 10,
+          reward: { type: 'courseAccess', value: 'Advanced Trading Masterclass' }
+        }
+      ]
     }
   },
   {
@@ -59,6 +164,25 @@ const plans = [
     stipend: {
       amount: 12,
       months: 5
+    },
+    referralBonus: {
+      amount: 20,
+      type: 'percentage',
+      tiers: [
+        { threshold: 3, bonus: 25 },
+        { threshold: 5, bonus: 30 },
+        { threshold: 10, bonus: 35 }
+      ],
+      milestoneRewards: [
+        { 
+          referrals: 5,
+          reward: { type: 'bonus', value: 200 }
+        },
+        {
+          referrals: 10,
+          reward: { type: 'courseAccess', value: 'Professional Trading Bundle' }
+        }
+      ]
     }
   }
 ]
@@ -66,38 +190,157 @@ const plans = [
 export default function PlansPage() {
   const router = useRouter()
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
+  const [referralCode, setReferralCode] = useState('')
+  const [referralStatus, setReferralStatus] = useState<'idle' | 'valid' | 'invalid'>('idle')
+  const [isValidating, setIsValidating] = useState(false)
+  const [discountedPlans, setDiscountedPlans] = useState(plans)
 
-  const handlePlanSelection = (plan: { name: string; price: number }) => {
-    // Store complete plan data
-    const planData = {
-      name: plan.name,
-      price: plan.price,
-      status: 'pending',
-      purchaseDate: new Date().toISOString()
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const refCode = urlParams.get('ref');
+    if (refCode) {
+      localStorage.setItem('referredBy', refCode);
     }
-    
-    // Store selected plan
-    localStorage.setItem("selectedPlan", JSON.stringify(planData))
-    
-    const token = localStorage.getItem("token")
-    if (!token) {
-      router.push(`/register?redirect=/payment`)
+  }, []);
+
+  useEffect(() => {
+    if (referralStatus === 'valid') {
+      const updatedPlans = plans.map(plan => {
+        let discount = 0;
+        if (plan.referralBonus.type === 'percentage') {
+          discount = (plan.price * plan.referralBonus.amount) / 100;
+        } else if (plan.referralBonus.type === 'fixed') {
+          discount = plan.referralBonus.amount;
+        }
+        
+        return {
+          ...plan,
+          originalPrice: plan.price,
+          price: plan.price - discount,
+          discountApplied: discount > 0
+        };
+      });
+      setDiscountedPlans(updatedPlans);
     } else {
-      router.push("/payment")
+      setDiscountedPlans(plans);
     }
-  }
+  }, [referralStatus]);
+
+  const validateReferralCode = async (code: string) => {
+    if (!code) return;
+    setIsValidating(true);
+    try {
+      // Get all stored referral codes from localStorage
+      const storedCodes = JSON.parse(localStorage.getItem('referralCodes') || '[]');
+      
+      if (storedCodes.includes(code)) {
+        setReferralStatus('valid');
+        localStorage.setItem('appliedReferralCode', code);
+        toast.success('Referral code applied successfully!');
+      } else {
+        setReferralStatus('invalid');
+        toast.error('Invalid referral code');
+      }
+    } catch (error) {
+      console.error('Error validating referral code:', error);
+      setReferralStatus('invalid');
+      toast.error('Error validating referral code');
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  const handlePlanSelection = async (plan: PlanWithReferral) => {
+    // Get the referral code the user registered with
+    const usedReferralCode = localStorage.getItem("usedReferralCode");
+    
+    if (usedReferralCode) {
+      // Apply discount to the plan
+      const discount = plan.price * 0.10; // 10% discount for referred users
+      const discountedPrice = plan.price - discount;
+
+      // Update the referrer's dashboard with purchase info
+      const referredUsers = JSON.parse(localStorage.getItem(`referredUsers_${usedReferralCode}`) || '[]');
+      const userData = JSON.parse(localStorage.getItem("userData") || '{}');
+      
+      // Find and update the user's purchase info
+      const userIndex = referredUsers.findIndex((u: any) => u.name === userData.name);
+      if (userIndex !== -1) {
+        referredUsers[userIndex] = {
+          ...referredUsers[userIndex],
+          plan: plan.name,
+          discount: discount,
+          status: 'active'
+        };
+        localStorage.setItem(`referredUsers_${usedReferralCode}`, JSON.stringify(referredUsers));
+
+        // Update referrer's earnings
+        const currentEarnings = parseFloat(localStorage.getItem(`referralEarnings_${usedReferralCode}`) || '0');
+        const newEarnings = currentEarnings + (discount * 0.5); // Referrer gets 50% of the discount as earnings
+        localStorage.setItem(`referralEarnings_${usedReferralCode}`, newEarnings.toString());
+      }
+
+      // Store the discounted plan details
+      localStorage.setItem("selectedPlan", JSON.stringify({
+        ...plan,
+        originalPrice: plan.price,
+        price: discountedPrice,
+        discountApplied: discount
+      }));
+    } else {
+      // No referral code, store original plan details
+      localStorage.setItem("selectedPlan", JSON.stringify(plan));
+    }
+
+    // Redirect to payment or registration
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.push("/register?redirect=/payment");
+    } else {
+      router.push("/payment");
+    }
+  };
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="text-center mb-12">
-        <h1 className="text-3xl font-bold mb-4">Choose Your Plan</h1>
-        <p className="text-muted-foreground max-w-2xl mx-auto">
-          Select the perfect plan to start your crypto trading journey. All plans include access to our community and basic resources.
-        </p>
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-md mx-auto mb-8">
+        <div className="space-y-2">
+          <label htmlFor="referralCode" className="text-sm font-medium">
+            Have a referral code?
+          </label>
+          <div className="flex gap-2">
+            <Input
+              id="referralCode"
+              placeholder="Enter referral code"
+              value={referralCode}
+              onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+              className={`uppercase ${
+                referralStatus === 'valid' 
+                  ? 'border-green-500' 
+                  : referralStatus === 'invalid' 
+                    ? 'border-red-500' 
+                    : ''
+              }`}
+            />
+            <Button
+              onClick={() => validateReferralCode(referralCode)}
+              disabled={isValidating || !referralCode}
+              variant="outline"
+            >
+              {isValidating ? "Checking..." : "Apply"}
+            </Button>
+          </div>
+          {referralStatus === 'valid' && (
+            <p className="text-sm text-green-600">✓ Valid referral code applied</p>
+          )}
+          {referralStatus === 'invalid' && (
+            <p className="text-sm text-red-600">✗ Invalid referral code</p>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4 max-w-7xl mx-auto">
-        {plans.map((plan) => (
+        {discountedPlans.map((plan) => (
           <Card 
             key={plan.name}
             className={`p-6 relative overflow-hidden group transition-all duration-300 
@@ -131,9 +374,25 @@ export default function PlansPage() {
             <div className="mb-6 relative">
               <h2 className="text-2xl font-bold mb-2">{plan.name}</h2>
               <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-bold group-hover:text-primary transition-colors duration-300">
-                  ${plan.price}
-                </span>
+                {plan.discountApplied ? (
+                  <>
+                    <span className="text-4xl font-bold text-primary">
+                      ${plan.price}
+                    </span>
+                    <span className="text-lg line-through text-muted-foreground">
+                      ${plan.originalPrice}
+                    </span>
+                    <span className="text-sm text-green-600">
+                      ({plan.referralBonus.type === 'percentage' 
+                        ? `${plan.referralBonus.amount}% off` 
+                        : `$${plan.referralBonus.amount} off`})
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-4xl font-bold">
+                    ${plan.price}
+                  </span>
+                )}
                 <span className="text-muted-foreground">/{plan.duration}</span>
               </div>
               {plan.stipend && (
@@ -151,6 +410,17 @@ export default function PlansPage() {
                     <span className="text-sm">{feature}</span>
                   </li>
                 ))}
+                {plan.referralBonus && (
+                  <li className="flex items-start gap-2">
+                    <Check className="h-4 w-4 text-primary shrink-0 mt-1" />
+                    <span className="text-sm">
+                      {plan.referralBonus.type === 'percentage' 
+                        ? `${plan.referralBonus.amount}% referral bonus`
+                        : `$${plan.referralBonus.amount} referral bonus`
+                      }
+                    </span>
+                  </li>
+                )}
               </ul>
             </div>
 

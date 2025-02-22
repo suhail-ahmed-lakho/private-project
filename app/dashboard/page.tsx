@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useEffect, memo } from "react"
-import { SiteHeader } from "@/components/site-header"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -17,7 +16,9 @@ import {
   ChevronRight,
   Bell,
   Wallet,
-  ArrowDownToLine
+  ArrowDownToLine,
+  UserCheck,
+  DollarSign
 } from "lucide-react"
 import {
   LineChart,
@@ -42,6 +43,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Loader2 } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 
 // Mock data
 const userData = {
@@ -152,12 +154,59 @@ interface Plan {
   price: number;
   status: 'active' | 'expired' | 'pending';
   purchaseDate: string;
+  referralBonus: {
+    type: 'percentage' | 'fixed';
+    value: number;
+  };
 }
 
 interface StatCardProps {
   title: string;
   value: string | number;
   icon: React.ElementType;
+}
+
+interface ReferredUser {
+  name: string;
+  joinedDate: string;
+  status: 'active' | 'inactive';
+  plan: string;
+  discount: number;
+}
+
+interface ReferralStats {
+  myReferralCode: string;
+  code: string;
+  totalReferrals: number;
+  activeReferrals: number;
+  earnings: number;
+  currentTier: {
+    threshold: number;
+    bonus: number;
+  };
+  nextTier?: {
+    threshold: number;
+    bonus: number;
+    remaining: number;
+  };
+  milestones: {
+    achieved: {
+      referrals: number;
+      reward: {
+        type: 'bonus' | 'courseAccess' | 'planUpgrade';
+        value: string | number;
+      };
+    }[];
+    next?: {
+      referrals: number;
+      reward: {
+        type: 'bonus' | 'courseAccess' | 'planUpgrade';
+        value: string | number;
+      };
+      remaining: number;
+    };
+  };
+  referredUsers: Array<ReferredUser>;
 }
 
 const StatCard = memo(({ title, value, icon: Icon }: StatCardProps) => {
@@ -173,6 +222,64 @@ const StatCard = memo(({ title, value, icon: Icon }: StatCardProps) => {
     </Card>
   )
 })
+
+const generateReferralCode = () => {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    code += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return code;
+};
+
+const ReferralCodeCard = () => {
+  const [copied, setCopied] = useState(false);
+  const [referralCode, setReferralCode] = useState<string>("");
+
+  useEffect(() => {
+    // Try to get existing referral code from localStorage
+    let code = localStorage.getItem('myReferralCode');
+    
+    // If no code exists, generate a new one
+    if (!code) {
+      code = generateReferralCode();
+      localStorage.setItem('myReferralCode', code);
+      
+      // Store this code in the list of valid referral codes
+      const storedCodes = JSON.parse(localStorage.getItem('referralCodes') || '[]');
+      storedCodes.push(code);
+      localStorage.setItem('referralCodes', JSON.stringify(storedCodes));
+    }
+    
+    setReferralCode(code);
+  }, []);
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(referralCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast.success("Referral code copied!");
+  };
+
+  return (
+    <Card className="col-span-3">
+      <CardHeader>
+        <CardTitle className="text-xl font-bold">Your Referral Code</CardTitle>
+        <CardDescription>Share this code with friends to earn rewards</CardDescription>
+      </CardHeader>
+      <CardContent className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="text-lg px-4 py-2">
+            {referralCode || "Loading..."}
+          </Badge>
+        </div>
+        <Button onClick={copyToClipboard} variant="outline">
+          {copied ? "Copied!" : "Copy Code"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+};
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("overview")
@@ -202,6 +309,22 @@ export default function DashboardPage() {
   })
   const [isWithdrawing, setIsWithdrawing] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [referralData, setReferralData] = useState<ReferralStats>({
+    myReferralCode: '',
+    code: '',
+    totalReferrals: 0,
+    activeReferrals: 0,
+    earnings: 0,
+    currentTier: {
+      threshold: 0,
+      bonus: 0
+    },
+    milestones: {
+      achieved: [],
+      next: undefined
+    },
+    referredUsers: []
+  })
 
   useEffect(() => {
     setMounted(true)
@@ -235,7 +358,11 @@ export default function DashboardPage() {
           name: formatPlanName(storedPlan.name),
           price: Number(storedPlan.price),
           status: planStatus,
-          purchaseDate: storedPlan.purchaseDate || new Date().toISOString()
+          purchaseDate: storedPlan.purchaseDate || new Date().toISOString(),
+          referralBonus: {
+            type: 'percentage',
+            value: 10
+          }
         }
         
         if (planStatus === 'active') {
@@ -312,7 +439,77 @@ export default function DashboardPage() {
       }
     }
     fetchData()
-  }, [router])
+
+    // Load or generate referral code
+    let code = localStorage.getItem('referralCode');
+    
+    if (!code) {
+      const userName = localStorage.getItem('userName') || 'USER';
+      const prefix = userName.slice(0, 3).toUpperCase();
+      const random = Math.random().toString(36).substring(2, 7).toUpperCase();
+      code = `${prefix}${random}`;
+      
+      // Store the new code
+      localStorage.setItem('referralCode', code);
+      
+      // Initialize or update the list of valid codes
+      const allCodes = JSON.parse(localStorage.getItem('validReferralCodes') || '[]');
+      if (!allCodes.includes(code)) {
+        allCodes.push(code);
+        localStorage.setItem('validReferralCodes', JSON.stringify(allCodes));
+      }
+    } else {
+      // Make sure existing code is in the valid codes list
+      const allCodes = JSON.parse(localStorage.getItem('validReferralCodes') || '[]');
+      if (!allCodes.includes(code)) {
+        allCodes.push(code);
+        localStorage.setItem('validReferralCodes', JSON.stringify(allCodes));
+      }
+    }
+
+    // Update referral data state
+    const fetchReferralData = async () => {
+      try {
+        const response = await fetch(`/api/referrals?code=${code}`);
+        if (!response.ok) throw new Error('Failed to fetch referrals');
+
+        const data = await response.json();
+        const referrals = data.referrals;
+
+        setReferralData({
+          myReferralCode: code,
+          code: code,
+          totalReferrals: referrals.length,
+          activeReferrals: referrals.filter(r => r.status === 'active').length,
+          earnings: referrals.reduce((sum, r) => sum + (r.earnings || 0), 0),
+          currentTier: {
+            threshold: 0,
+            bonus: 0
+          },
+          milestones: {
+            achieved: [],
+            next: {
+              referrals: 5,
+              reward: {
+                type: 'bonus',
+                value: 10
+              },
+              remaining: 5
+            }
+          },
+          referredUsers: referrals
+        });
+      } catch (error) {
+        console.error('Error fetching referral data:', error);
+      }
+    };
+
+    fetchReferralData();
+
+    // Set up storage event listener
+    window.addEventListener('storage', fetchReferralData);
+    return () => window.removeEventListener('storage', fetchReferralData);
+  }, [])
 
   const handleWithdrawSubmit = async () => {
     if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) {
@@ -392,6 +589,36 @@ export default function DashboardPage() {
     console.log("Stored plan:", plan ? JSON.parse(plan) : null)
     console.log("Stored payment:", payment ? JSON.parse(payment) : null)
   }, [])
+
+  // Function to add a test referral
+  const addTestReferral = () => {
+    const newUser = {
+      name: `User ${Math.floor(Math.random() * 1000)}`,
+      joinedDate: new Date().toISOString(),
+      status: 'active' as const
+    };
+
+    // Get current data from localStorage
+    const currentUsers = JSON.parse(localStorage.getItem('referredUsers') || '[]');
+    const updatedUsers = [...currentUsers, newUser];
+    
+    // Update localStorage
+    localStorage.setItem('referredUsers', JSON.stringify(updatedUsers));
+    
+    // Update earnings
+    const currentEarnings = parseFloat(localStorage.getItem('referralEarnings') || '0');
+    const newEarnings = currentEarnings + 10; // $10 per referral
+    localStorage.setItem('referralEarnings', newEarnings.toString());
+
+    // Update state
+    setReferralData(prev => ({
+      ...prev,
+      totalReferrals: updatedUsers.length,
+      activeReferrals: updatedUsers.filter(u => u.status === 'active').length,
+      totalEarnings: newEarnings,
+      referredUsers: updatedUsers
+    }));
+  };
 
   if (isLoading) {
     return <div className="flex h-screen items-center justify-center">Loading...</div>
@@ -473,9 +700,12 @@ export default function DashboardPage() {
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             <StatCard title="Overall Progress" value={`${userData.progress}%`} icon={Trophy} />
             <StatCard title="Courses Completed" value={userData.coursesCompleted} icon={BookOpen} />
-            <StatCard title="Referrals" value={userData.wallet.referrals} icon={Users} />
-            <StatCard title="Total Earnings" value={`$${userData.wallet.earnings}`} icon={Wallet2} />
+            <StatCard title="Total Earnings" value={`$${totalEarnings}`} icon={DollarSign} />
+            <StatCard title="Active Referrals" value={userData.referralStats?.activeReferrals || 0} icon={UserCheck} />
+            <StatCard title="Total Referrals" value={userData.referralStats?.totalReferrals || 0} icon={Users} />
           </div>
+
+          <ReferralCodeCard />
 
           <div className="mt-8 grid gap-6 lg:grid-cols-3">
             <Card className="col-span-2 p-6">
@@ -514,7 +744,7 @@ export default function DashboardPage() {
                       <p className="text-sm text-muted-foreground">
                         {notification.description}
                       </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
+                      <p className="text-sm text-muted-foreground mt-1">
                         {notification.time}
                       </p>
                     </div>
@@ -524,6 +754,194 @@ export default function DashboardPage() {
               </div>
             </Card>
           </div>
+
+          <Card className="mt-8 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold">Your Referral Program</h2>
+            </div>
+
+            <Card className="mt-8">
+              <CardHeader>
+                <CardTitle>Your Referral Program</CardTitle>
+                <CardDescription>
+                  Share your referral code with friends and earn rewards
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col gap-6">
+                  {/* Referral Code */}
+                  <div className="flex items-center gap-4">
+                    <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-lg font-semibold">
+                      {referralData.myReferralCode || 'Generating...'}
+                    </code>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        const code = referralData.myReferralCode;
+                        if (code) {
+                          navigator.clipboard.writeText(`${window.location.origin}/register?ref=${code}`);
+                          toast({
+                            title: "Copied!",
+                            description: "Referral link copied to clipboard",
+                          });
+                        }
+                      }}
+                      disabled={!referralData.myReferralCode}
+                    >
+                      Copy Referral Link
+                    </Button>
+                    <Button onClick={addTestReferral}>
+                      Test Add Referral
+                    </Button>
+                  </div>
+
+                  {/* Referral Stats */}
+                  <div className="grid gap-6 md:grid-cols-4">
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">Total Referrals</p>
+                      <p className="text-2xl font-bold">{referralData.totalReferrals}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">Active Referrals</p>
+                      <p className="text-2xl font-bold">{referralData.activeReferrals}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">Current Bonus</p>
+                      <p className="text-2xl font-bold text-green-600">
+                        {referralData.currentTier.bonus}
+                        {selectedPlan?.referralBonus.type === 'percentage' ? '%' : '$'}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">Total Earnings</p>
+                      <p className="text-2xl font-bold text-green-600">
+                        ${referralData.earnings.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Next Tier Progress */}
+                  {referralData.nextTier && (
+                    <Card className="p-4 mt-6">
+                      <h4 className="font-semibold mb-2">Next Tier Progress</h4>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>
+                            {referralData.totalReferrals} / {referralData.nextTier.threshold} Referrals
+                          </span>
+                          <span className="text-muted-foreground">
+                            {referralData.nextTier.remaining} more to unlock {referralData.nextTier.bonus}
+                            {selectedPlan?.referralBonus.type === 'percentage' ? '%' : '$'} bonus
+                          </span>
+                        </div>
+                        <Progress
+                          value={(referralData.totalReferrals / referralData.nextTier.threshold) * 100}
+                          className="h-2"
+                        />
+                      </div>
+                    </Card>
+                  )}
+
+                  {/* Milestones */}
+                  <div className="space-y-4 mt-6">
+                    <h4 className="font-semibold">Milestones</h4>
+                    
+                    {/* Achieved Milestones */}
+                    {referralData.milestones.achieved.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground">Achieved</p>
+                        <div className="grid gap-4 md:grid-cols-2">
+                          {referralData.milestones.achieved.map((milestone, index) => (
+                            <Card key={index} className="p-4 bg-muted/50">
+                              <div className="flex items-center gap-2">
+                                <Award className="h-5 w-5 text-green-600" />
+                                <div>
+                                  <p className="font-medium">
+                                    {milestone.referrals} Referrals Achievement
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    Reward: {milestone.reward.type === 'bonus' 
+                                      ? `$${milestone.reward.value} Bonus` 
+                                      : milestone.reward.type === 'planUpgrade'
+                                      ? `Free upgrade to ${milestone.reward.value} Plan`
+                                      : `Free access to ${milestone.reward.value}`}
+                                  </p>
+                                </div>
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Next Milestone */}
+                    {referralData.milestones.next && (
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground">Next Milestone</p>
+                        <Card className="p-4">
+                          <div className="flex items-center gap-2">
+                            <Trophy className="h-5 w-5 text-yellow-600" />
+                            <div>
+                              <p className="font-medium">
+                                {referralData.milestones.next.referrals} Referrals Goal
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                Reward: {referralData.milestones.next.reward.type === 'bonus' 
+                                  ? `$${referralData.milestones.next.reward.value} Bonus` 
+                                  : referralData.milestones.next.reward.type === 'planUpgrade'
+                                  ? `Free upgrade to ${referralData.milestones.next.reward.value} Plan`
+                                  : `Free access to ${referralData.milestones.next.reward.value}`}
+                              </p>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {referralData.milestones.next.remaining} more referrals needed
+                              </p>
+                            </div>
+                          </div>
+                          <Progress
+                            value={((referralData.milestones.next.referrals - referralData.milestones.next.remaining) / referralData.milestones.next.referrals) * 100}
+                            className="h-2 mt-3"
+                          />
+                        </Card>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Referred Users List */}
+                  <div className="space-y-4 mt-6">
+                    <h4 className="font-semibold">Recent Referrals</h4>
+                    <div className="space-y-2">
+                      {referralData.referredUsers.map((user, index) => (
+                        <Card key={index} className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <UserCheck className={`h-5 w-5 ${
+                                user.status === 'active' ? 'text-green-600' : 'text-yellow-600'
+                              }`} />
+                              <div>
+                                <p className="font-medium">{user.name}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  Joined {new Date(user.joinedDate).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
+                                {user.status}
+                              </Badge>
+                              <p className="text-sm text-muted-foreground mt-1">{user.plan}</p>
+                              <p className="text-sm text-green-600">
+                                ${user.discount} discount applied
+                              </p>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Card>
         </TabsContent>
 
         <TabsContent value="courses">

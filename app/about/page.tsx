@@ -1,6 +1,5 @@
 "use client"
 
-import { SiteHeader } from "@/components/site-header"
 import { Card } from "@/components/ui/card"
 import { BookOpen, Users, Trophy, Target, Wallet2, Shield } from "lucide-react"
 
@@ -47,8 +46,6 @@ const stats = [
 export default function AboutPage() {
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader />
-      
       <main className="flex-1">
         {/* Hero Section */}
         <div className="bg-primary py-16 text-primary-foreground">

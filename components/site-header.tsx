@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
@@ -38,8 +39,10 @@ export function SiteHeader() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
     const checkAuth = () => {
       const token = localStorage.getItem("token")
       setIsAuthenticated(!!token)
@@ -64,57 +67,52 @@ export function SiteHeader() {
     window.location.href = "/"
   }
 
+  // Don't render navigation until mounted to prevent flashing
+  if (!mounted) {
+    return (
+      <header className={cn(
+        "sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+        isScrolled && "shadow-sm"
+      )}>
+        <div className="container flex h-16 items-center">
+          <div className="mr-4 hidden md:flex">
+            <Link href="/" className="mr-6 flex items-center space-x-2">
+              <Image
+                src="/images/logo.png"
+                alt="Logo"
+                width={48}
+                height={48}
+                className="rounded-md hover:opacity-90 transition-opacity"
+                priority
+              />
+            </Link>
+          </div>
+        </div>
+      </header>
+    )
+  }
+
+  // Only show navigation items appropriate for the current auth state
   const items = isAuthenticated ? authenticatedItems : navigationItems
 
   return (
-    <header
-      className={cn(
-        "sticky top-0 z-50 w-full transition-all duration-300",
-        isScrolled
-          ? "bg-background/80 backdrop-blur-lg shadow-sm"
-          : "bg-transparent"
-      )}
-    >
-      <div className="container flex h-16 items-center justify-between">
-        <div className="flex items-center gap-6">
-          {/* Mobile Menu Button */}
-          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-            <SheetTrigger asChild className="md:hidden">
-              <Button variant="ghost" size="icon" className="mr-2">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-[300px]">
-              <div className="flex flex-col space-y-4 py-4">
-                {items.map(({ href, label, icon: Icon }) => (
-                  <Link
-                    key={href}
-                    href={href}
-                    className={cn(
-                      "flex items-center space-x-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent",
-                      pathname === href && "bg-accent"
-                    )}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span>{label}</span>
-                  </Link>
-                ))}
-              </div>
-            </SheetContent>
-          </Sheet>
-
-          {/* Logo */}
-          <Link 
-            href="/" 
-            className="flex items-center space-x-2 transition-transform hover:scale-105"
-          >
-            <Wallet2 className="h-6 w-6 text-primary" />
-            <span className="font-bold gradient-text">CryptoEdu</span>
+    <header className={cn(
+      "sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+      isScrolled && "shadow-sm"
+    )}>
+      <div className="container flex h-16 items-center">
+        <div className="mr-4 hidden md:flex">
+          <Link href="/" className="mr-6 flex items-center space-x-2">
+            <Image
+              src="/images/logo.png"
+              alt="Logo"
+              width={48}
+              height={48}
+              className="rounded-md hover:opacity-90 transition-opacity"
+              priority
+            />
           </Link>
-
-          {/* Desktop Navigation */}
-          <NavigationMenu className="hidden md:block">
+          <NavigationMenu>
             <NavigationMenuList>
               {items.map(({ href, label, icon: Icon }) => (
                 <NavigationMenuItem key={href}>
@@ -134,20 +132,18 @@ export function SiteHeader() {
             </NavigationMenuList>
           </NavigationMenu>
         </div>
-
-        {/* Right Side Items */}
+        <div className="flex-1" />
         <div className="flex items-center space-x-4">
           <ModeToggle />
-          
           {isAuthenticated ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   className="relative h-8 w-8 rounded-full ring-2 ring-primary/20 transition-all hover:ring-primary"
                 >
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src="/placeholder-avatar.jpg" alt="User" />
+                    <AvatarImage src="/images/avatar-placeholder.png" alt="User" />
                     <AvatarFallback>U</AvatarFallback>
                   </Avatar>
                 </Button>
@@ -164,7 +160,7 @@ export function SiteHeader() {
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   onClick={handleLogout}
                   className="text-destructive focus:text-destructive"
                 >
@@ -182,6 +178,43 @@ export function SiteHeader() {
               </Button>
             </div>
           )}
+          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+            <SheetTrigger asChild className="md:hidden">
+              <Button variant="ghost" size="icon" className="mr-2">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[300px]">
+              <div className="flex flex-col space-y-4 py-4">
+                <div className="flex items-center justify-between">
+                  <Link href="/" className="flex items-center space-x-2">
+                    <Image
+                      src="/images/logo.png"
+                      alt="Logo"
+                      width={40}
+                      height={40}
+                      className="rounded-md hover:opacity-90 transition-opacity"
+                      priority
+                    />
+                  </Link>
+                </div>
+                {items.map(({ href, label, icon: Icon }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={cn(
+                      "flex items-center space-x-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent",
+                      pathname === href && "bg-accent"
+                    )}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{label}</span>
+                  </Link>
+                ))}
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
     </header>

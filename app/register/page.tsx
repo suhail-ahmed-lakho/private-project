@@ -1,9 +1,8 @@
 "use client"
 
-import { useState, Suspense } from "react"
+import { useState, Suspense, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -32,6 +31,7 @@ function RegisterContent() {
   })
 
   const redirectTo = searchParams.get('redirect')
+  const referralCode = searchParams.get('ref')
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -62,22 +62,59 @@ function RegisterContent() {
     setLoading(true)
     
     try {
-      // Store user data with the actual name from the form
+      localStorage.setItem("userName", formData.fullName)
+      
       const userData = {
         name: formData.fullName,
         email: formData.email,
+        registrationDate: new Date().toISOString()
       }
-      localStorage.setItem("token", "mock-token")
       localStorage.setItem("userData", JSON.stringify(userData))
-      
-      toast({
-        title: "Registration Successful",
-        description: "Please login to continue",
-      })
+      localStorage.setItem("token", "mock-token")
+
+      if (referralCode) {
+        try {
+          const response = await fetch('/api/referrals', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              referralCode,
+              userName: formData.fullName,
+              email: formData.email
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to record referral');
+          }
+
+          localStorage.setItem("usedReferralCode", referralCode)
+
+          toast({
+            title: "Registration Successful",
+            description: "Referral code applied! You'll get a discount on your purchase.",
+          })
+        } catch (error) {
+          console.error('Error recording referral:', error);
+          toast({
+            title: "Warning",
+            description: "Registration successful but failed to apply referral code.",
+            variant: "destructive",
+          })
+        }
+      } else {
+        toast({
+          title: "Registration Successful",
+          description: "Please login to continue",
+        })
+      }
       
       router.push(`/login${redirectTo ? `?redirect=${redirectTo}` : ''}`)
       router.refresh()
     } catch (error) {
+      console.error('Registration error:', error)
       toast({
         title: "Error",
         description: "Registration failed. Please try again.",
@@ -88,10 +125,14 @@ function RegisterContent() {
     }
   }
 
+  useEffect(() => {
+    if (referralCode) {
+      console.log('Referral code detected:', referralCode)
+    }
+  }, [referralCode])
+
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader />
-      
       <main className="flex-1">
         <div className="container flex items-center justify-center py-8 sm:py-16">
           <Card className="w-full max-w-md p-4 sm:p-6">
@@ -100,6 +141,13 @@ function RegisterContent() {
               <p className="mb-6 text-muted-foreground">
                 Join CryptoEdu and start your crypto journey today
               </p>
+              {referralCode && (
+                <div className="mb-4 p-2 bg-green-50 text-green-700 rounded-md text-sm">
+                  <p className="font-medium">Referral Code Applied!</p>
+                  <p>Code: {referralCode}</p>
+                  <p>You'll get a discount on your purchase</p>
+                </div>
+              )}
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">

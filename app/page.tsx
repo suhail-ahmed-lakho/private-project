@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { SiteHeader } from "@/components/site-header"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Check } from "lucide-react"
@@ -20,22 +19,29 @@ import {
   TrendingUp,
   Shield
 } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { Crown, Star } from "lucide-react"
 
 const slides = [
   {
-    image: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&q=80&w=2070",
+    image: "/images/image1.jpg",
     title: "Master Crypto Trading",
     description: "Learn from industry experts and start your journey in cryptocurrency trading",
   },
   {
-    image: "https://images.unsplash.com/photo-1621504450181-5d356f61d307?auto=format&fit=crop&q=80&w=2070",
+    image: "/images/image2.jpg",
     title: "Earn While You Learn",
     description: "Get stipends and rewards as you progress through our comprehensive courses",
   },
   {
-    image: "https://images.unsplash.com/photo-1620321023374-d1a68fbc720d?auto=format&fit=crop&q=80&w=2070",
+    image: "/images/image3.jpg",
     title: "Join Our Community",
     description: "Connect with fellow traders and build your network in the crypto space",
+  },
+  {
+    image: "/images/image4.jpg",
+    title: "Advanced Trading Tools",
+    description: "Access professional trading tools and real-time market analysis",
   },
 ]
 
@@ -141,6 +147,9 @@ const plans = [
 
 export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
+  const [touchStart, setTouchStart] = useState(0)
+  const [touchEnd, setTouchEnd] = useState(0)
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -149,72 +158,150 @@ export default function Home() {
     return () => clearInterval(timer)
   }, [])
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchEnd = () => {
+    if (touchStart - touchEnd > 75) {
+      // Swipe left
+      setCurrentSlide((prev) => (prev + 1) % slides.length)
+    }
+
+    if (touchStart - touchEnd < -75) {
+      // Swipe right
+      setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length)
+    }
+  }
+
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % slides.length)
+  }
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length)
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader />
-      
       <main className="flex-1">
         {/* Hero Section */}
-        <div className="relative h-[85vh] overflow-hidden">
-          {slides.map((slide, index) => (
-            <div
-              key={index}
-              className={`absolute inset-0 transition-opacity duration-1000 ${
-                index === currentSlide ? "opacity-100" : "opacity-0"
-              }`}
-            >
-              <Image
-                src={slide.image}
-                alt={slide.title}
-                fill
-                className="object-cover"
-                priority={index === 0}
-              />
-              <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-black/80" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="container text-center text-white">
-                  <h1 className="animate-float mb-6 text-5xl font-bold leading-tight sm:text-6xl md:text-7xl">
-                    {slide.title}
-                  </h1>
-                  <p className="mx-auto mb-8 max-w-2xl text-lg sm:text-xl">
-                    {slide.description}
-                  </p>
-                  <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-                    <Button 
-                      size="lg" 
-                      className="group min-w-[200px] bg-primary text-lg hover:bg-primary/90"
-                      asChild
+        <div 
+          className="relative h-[600px] overflow-hidden"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          {/* Slides */}
+          <div className="relative h-full">
+            {slides.map((slide, index) => (
+              <div
+                key={index}
+                className={cn(
+                  "absolute inset-0 transition-all duration-700",
+                  currentSlide === index 
+                    ? "opacity-100 translate-x-0" 
+                    : currentSlide < index
+                    ? "opacity-0 translate-x-full"
+                    : "opacity-0 -translate-x-full"
+                )}
+              >
+                <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-black/80" />
+                <Image
+                  src={slide.image}
+                  alt={slide.title}
+                  fill
+                  className={cn(
+                    "object-cover transition-transform duration-[2s]",
+                    currentSlide === index && "scale-105"
+                  )}
+                  priority={index === 0}
+                  onLoadingComplete={() => setIsLoading(false)}
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="container px-4 text-center text-white">
+                    <h1 
+                      className={cn(
+                        "mb-6 text-4xl font-bold transition-all duration-700 sm:text-5xl md:text-6xl",
+                        currentSlide === index 
+                          ? "translate-y-0 opacity-100" 
+                          : "translate-y-4 opacity-0"
+                      )}
                     >
-                      <Link href="/register">
-                        Get Started
-                        <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-                      </Link>
-                    </Button>
-                    <Button 
-                      size="lg"
-                      variant="outline"
-                      className="min-w-[200px] border-white text-lg text-white hover:bg-white hover:text-black"
-                      asChild
+                      {slide.title}
+                    </h1>
+                    <p 
+                      className={cn(
+                        "mx-auto mb-8 max-w-2xl text-lg text-gray-200 transition-all delay-100 duration-700 sm:text-xl",
+                        currentSlide === index 
+                          ? "translate-y-0 opacity-100" 
+                          : "translate-y-4 opacity-0"
+                      )}
                     >
-                      <Link href="/plans">View Plans</Link>
-                    </Button>
+                      {slide.description}
+                    </p>
+                    <div 
+                      className={cn(
+                        "flex justify-center gap-4 transition-all delay-200 duration-700",
+                        currentSlide === index 
+                          ? "translate-y-0 opacity-100" 
+                          : "translate-y-4 opacity-0"
+                      )}
+                    >
+                      <Button size="lg" className="min-w-[150px]" asChild>
+                        <Link href="/plans">Get Started</Link>
+                      </Button>
+                      <Button size="lg" variant="outline" className="min-w-[150px]" asChild>
+                        <Link href="/about">Learn More</Link>
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
+            ))}
+          </div>
+
+          {/* Loading Overlay */}
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/90">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
             </div>
-          ))}
+          )}
+
+          {/* Navigation Buttons */}
           <button
-            onClick={() => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length)}
-            className="absolute left-4 top-1/2 -translate-y-1/2 transform rounded-full bg-black/20 p-3 text-white backdrop-blur-sm transition-all hover:bg-black/40"
+            onClick={prevSlide}
+            className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/30 p-3 text-white backdrop-blur-sm transition-all hover:bg-black/50 focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <ChevronLeft className="h-6 w-6" />
           </button>
           <button
-            onClick={() => setCurrentSlide((prev) => (prev + 1) % slides.length)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 transform rounded-full bg-black/20 p-3 text-white backdrop-blur-sm transition-all hover:bg-black/40"
+            onClick={nextSlide}
+            className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/30 p-3 text-white backdrop-blur-sm transition-all hover:bg-black/50 focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <ChevronRight className="h-6 w-6" />
           </button>
+
+          {/* Slide Indicators */}
+          <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 gap-2">
+            {slides.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentSlide(index)}
+                className={cn(
+                  "h-2 rounded-full transition-all duration-300",
+                  currentSlide === index
+                    ? "w-8 bg-primary"
+                    : "w-2 bg-white/50 hover:bg-white/75"
+                )}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Stats Section */}
@@ -312,64 +399,69 @@ export default function Home() {
         </section>
 
         {/* Plans Section */}
-        <section className="py-24">
-          <div className="container">
-            <div className="mb-16 text-center">
-              <h2 className="mb-4 text-4xl font-bold">Choose Your Plan</h2>
-              <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-                Start your crypto journey with our flexible education plans
+        <section className="py-16 bg-muted/50">
+          <div className="container px-4">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold mb-4">Choose Your Learning Path</h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Select a plan that best suits your learning goals. Each plan includes comprehensive curriculum and dedicated support.
               </p>
             </div>
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-              {plans.map((plan) => (
-                <Card
-                  key={plan.name}
-                  className="relative overflow-hidden p-6 transition-all hover:shadow-lg"
-                >
-                  {plan.stipend && (
-                    <Badge className="absolute right-4 top-4 bg-primary">
-                      Stipend Included
-                    </Badge>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {plans.map((plan, index) => (
+                <Card key={index} className={cn(
+                  "relative overflow-hidden transition-all duration-300 hover:shadow-lg flex flex-col h-full",
+                  plan.name === "Premium" && "border-primary"
+                )}>
+                  {plan.name === "Premium" && (
+                    <div className="absolute top-4 right-4">
+                      <Crown className="h-6 w-6 text-primary" />
+                    </div>
                   )}
-                  <div className="mb-6 text-center">
-                    <h3 className="mb-2 text-2xl font-bold">{plan.name}</h3>
-                    <div className="mb-2">
-                      <span className="text-4xl font-bold">${plan.price}</span>
+                  <div className="p-6 flex-1">
+                    <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
+                    <div className="flex items-baseline gap-1 mb-6">
+                      <span className="text-3xl font-bold">${plan.price}</span>
                       <span className="text-muted-foreground">/{plan.duration}</span>
                     </div>
-                    {plan.stipend && (
-                      <p className="text-sm text-muted-foreground">
-                        ${plan.stipend.amount} monthly stipend for {plan.stipend.months} months
-                      </p>
-                    )}
+                    <ul className="space-y-3 mb-6">
+                      {plan.features.map((feature, i) => (
+                        <li key={i} className="flex items-center gap-2">
+                          <Check className="h-5 w-5 text-primary flex-shrink-0" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                      {plan.stipend && (
+                        <li className="flex items-center gap-2 font-medium text-primary">
+                          <Star className="h-5 w-5 flex-shrink-0" />
+                          <span>${plan.stipend.amount} monthly stipend for {plan.stipend.months} months</span>
+                        </li>
+                      )}
+                    </ul>
                   </div>
-
-                  <ul className="mb-6 space-y-3">
-                    {plan.features.slice(0, 4).map((feature) => (
-                      <li key={feature} className="flex items-start gap-2">
-                        <Check className="mt-1 h-4 w-4 shrink-0 text-primary" />
-                        <span className="text-sm">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Button
-                    className="w-full"
-                    variant="outline"
-                    asChild
-                  >
-                    <Link href="/plans">Choose {plan.name}</Link>
-                  </Button>
+                  <div className="p-6 pt-0 mt-auto border-t">
+                    <div className="space-y-3">
+                      <Button className="w-full" variant={plan.name === "Premium" ? "default" : "outline"} asChild>
+                        <Link href="/plans">Choose {plan.name}</Link>
+                      </Button>
+                      <Button variant="link" className="w-full text-sm text-muted-foreground hover:text-primary" asChild>
+                        <Link href="/plans">View detailed features</Link>
+                      </Button>
+                    </div>
+                  </div>
                 </Card>
               ))}
             </div>
-            <div className="mt-8 text-center">
-              <Button
-                size="lg"
-                className="min-w-[200px]"
-                asChild
-              >
-                <Link href="/plans">View All Features</Link>
+
+            <div className="mt-12 text-center">
+              <p className="text-muted-foreground mb-4">
+                All plans include access to our community and learning resources
+              </p>
+              <Button variant="link" asChild>
+                <Link href="/plans" className="text-primary font-medium hover:underline">
+                  View detailed plan comparison <ArrowRight className="h-4 w-4 ml-1" />
+                </Link>
               </Button>
             </div>
           </div>
