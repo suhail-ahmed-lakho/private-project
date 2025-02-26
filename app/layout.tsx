@@ -10,11 +10,11 @@ import { HeaderWrapper } from "@/components/header-wrapper";
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'CryptoEdu - Learn Crypto Trading',
+  title: 'Digital Edutech',
   description: 'Expert-led cryptocurrency education platform with flexible learning plans and earning opportunities',
   keywords: 'crypto, trading, education, blockchain, cryptocurrency',
   openGraph: {
-    title: 'CryptoEdu - Learn Crypto Trading',
+    title: 'Digital Edutech',
     description: 'Expert-led cryptocurrency education platform',
     images: ['/og-image.jpg'],
   },

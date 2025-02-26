@@ -2,14 +2,13 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
 import { NavigationMenu, NavigationMenuItem, NavigationMenuLink, NavigationMenuList } from "@/components/ui/navigation-menu"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
-import { Wallet2, BookOpen, Users, Phone, Home, Menu, LogOut } from "lucide-react"
+import { Wallet2, BookOpen, Users, Phone, Home, Menu, LogOut, Diamond } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -93,14 +92,12 @@ export function SiteHeader() {
         <div className="container flex h-16 items-center">
           <div className="mr-4 hidden md:flex">
             <Link href="/" className="mr-6 flex items-center space-x-2">
-              <Image
-                src="/images/logo.png"
-                alt="Logo"
-                width={48}
-                height={48}
-                className="rounded-md hover:opacity-90 transition-opacity"
-                priority
-              />
+              <div className="flex items-center justify-center bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-md">
+                <Diamond className="h-8 w-8 text-white" />
+              </div>
+              <span className="font-bold text-xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Digital Edutech
+              </span>
             </Link>
           </div>
         </div>
@@ -119,14 +116,12 @@ export function SiteHeader() {
       <div className="container flex h-16 items-center">
         <div className="mr-4 hidden md:flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
-            <Image
-              src="/images/logo.png"
-              alt="Logo"
-              width={48}
-              height={48}
-              className="rounded-md hover:opacity-90 transition-opacity"
-              priority
-            />
+            <div className="flex items-center justify-center bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-md">
+              <Diamond className="h-8 w-8 text-white" />
+            </div>
+            <span className="font-bold text-xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Digital Edutech
+            </span>
           </Link>
           <NavigationMenu>
             <NavigationMenuList>
@@ -209,15 +204,13 @@ export function SiteHeader() {
             <SheetContent side="left" className="w-[300px]">
               <div className="flex flex-col space-y-4 py-4">
                 <div className="flex items-center justify-between">
-                  <Link href="/" className="flex items-center space-x-2">
-                    <Image
-                      src="/images/logo.png"
-                      alt="Logo"
-                      width={40}
-                      height={40}
-                      className="rounded-md hover:opacity-90 transition-opacity"
-                      priority
-                    />
+                  <Link href="/" className="md:hidden flex items-center space-x-2">
+                    <div className="flex items-center justify-center bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-md">
+                      <Diamond className="h-6 w-6 text-white" />
+                    </div>
+                    <span className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                      Digital Edutech
+                    </span>
                   </Link>
                 </div>
                 {items.map(({ href, label, icon: Icon }) => (
