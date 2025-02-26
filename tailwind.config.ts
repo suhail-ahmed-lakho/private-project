@@ -72,12 +72,17 @@ const config: Config = {
         shimmer: {
           "100%": { transform: "translateX(100%)" },
         },
+        "spin-slow": {
+          "0%": { transform: "rotate(0deg)" },
+          "100%": { transform: "rotate(360deg)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         float: "float 3s ease-in-out infinite",
         shimmer: "shimmer 2s infinite",
+        "spin-slow": "spin-slow 8s linear infinite",
       },
       boxShadow: {
         glow: "0 0 20px rgba(var(--primary-rgb), 0.35)",

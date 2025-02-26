@@ -8,7 +8,7 @@ import { ModeToggle } from "@/components/mode-toggle"
 import { NavigationMenu, NavigationMenuItem, NavigationMenuLink, NavigationMenuList } from "@/components/ui/navigation-menu"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
-import { Wallet2, BookOpen, Users, Phone, Home, Menu, LogOut, Diamond } from "lucide-react"
+import { Wallet2, BookOpen, Users, Phone, Home, Menu, LogOut } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -93,7 +93,20 @@ export function SiteHeader() {
           <div className="mr-4 hidden md:flex">
             <Link href="/" className="mr-6 flex items-center space-x-2">
               <div className="flex items-center justify-center bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-md">
-                <Diamond className="h-8 w-8 text-white" />
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className="h-8 w-8 text-white animate-spin-slow" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                  <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
               </div>
               <span className="font-bold text-xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Digital Edutech
@@ -113,11 +126,26 @@ export function SiteHeader() {
       "sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
       isScrolled && "shadow-sm"
     )}>
-      <div className="container flex h-16 items-center">
-        <div className="mr-4 hidden md:flex">
+      <div className="container flex h-16 items-center justify-between">
+        {/* Desktop Logo and Navigation */}
+        <div className="hidden md:flex items-center">
           <Link href="/" className="mr-6 flex items-center space-x-2">
-            <div className="flex items-center justify-center bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-md">
-              <Diamond className="h-8 w-8 text-white" />
+            <div className="flex items-center justify-center bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-md relative overflow-hidden group">
+              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className="h-8 w-8 text-white animate-spin-slow" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+              </svg>
             </div>
             <span className="font-bold text-xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               Digital Edutech
@@ -143,7 +171,34 @@ export function SiteHeader() {
             </NavigationMenuList>
           </NavigationMenu>
         </div>
-        <div className="flex-1" />
+
+        {/* Mobile Logo */}
+        <div className="flex md:hidden items-center">
+          <Link href="/" className="flex items-center space-x-2">
+            <div className="flex items-center justify-center bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-md relative overflow-hidden group">
+              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className="h-6 w-6 text-white animate-spin-slow" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+              </svg>
+            </div>
+            <span className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Digital Edutech
+            </span>
+          </Link>
+        </div>
+
+        {/* Mobile Menu */}
         <div className="flex items-center space-x-4">
           <ModeToggle />
           {isAuthenticated ? (
@@ -195,18 +250,33 @@ export function SiteHeader() {
               </Button>
             </div>
           )}
+          {/* Mobile Menu Button - Now on the right side */}
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild className="md:hidden">
-              <Button variant="ghost" size="icon" className="mr-2">
+              <Button variant="ghost" size="icon">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[300px]">
+            <SheetContent side="right" className="w-[300px]">
               <div className="flex flex-col space-y-4 py-4">
                 <div className="flex items-center justify-between">
                   <Link href="/" className="md:hidden flex items-center space-x-2">
-                    <div className="flex items-center justify-center bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-md">
-                      <Diamond className="h-6 w-6 text-white" />
+                    <div className="flex items-center justify-center bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-md relative overflow-hidden group">
+                      <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        className="h-6 w-6 text-white animate-spin-slow" 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        strokeWidth="2" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round"
+                      >
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                      </svg>
                     </div>
                     <span className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                       Digital Edutech
